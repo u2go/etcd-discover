@@ -17,15 +17,15 @@ var (
 )
 
 // NewDiscover 创建服务发现实例
-func NewDiscover(client *client.Client, serviceName string) *discover {
-	return &discover{
+func NewDiscover(client *client.Client, serviceName string) *Discover {
+	return &Discover{
 		client: client,
 
 		serviceName: serviceName,
 	}
 }
 
-type discover struct {
+type Discover struct {
 	client *client.Client
 
 	// 服务名
@@ -34,7 +34,7 @@ type discover struct {
 
 // Register 节点注册
 // 出错返回 error，返回error的时候要重启服务
-func (d *discover) Register(node *Node) error {
+func (d *Discover) Register(node *Node) error {
 	var key = fmt.Sprintf("%s%s/%d", etcdKeyPrefix, d.serviceName, node.Id)
 	b, err := json.Marshal(node)
 	if err != nil {
@@ -78,7 +78,7 @@ END:
 
 // WatchNodes 监听节点变化。
 // handle会在收到节点变化时被调用，会调用多次
-func (d *discover) WatchNodes(handle func(nodes map[int64]*NodeAction)) error {
+func (d *Discover) WatchNodes(handle func(nodes map[int64]*NodeAction)) error {
 	key := fmt.Sprintf("%s%s/", etcdKeyPrefix, d.serviceName)
 	watcher := client.NewWatcher(d.client)
 	watchChan := watcher.Watch(Ctx(), key, client.WithPrefix())
@@ -110,7 +110,7 @@ func (d *discover) WatchNodes(handle func(nodes map[int64]*NodeAction)) error {
 }
 
 // GetNodes 获取所有活跃节点
-func (d *discover) GetNodes() (map[int64]*Node, error) {
+func (d *Discover) GetNodes() (map[int64]*Node, error) {
 	key := fmt.Sprintf("%s%s/", etcdKeyPrefix, d.serviceName)
 	kv := client.NewKV(d.client)
 	res, err := kv.Get(Ctx(), key, client.WithPrefix())
