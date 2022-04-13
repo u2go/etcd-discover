@@ -1,14 +1,16 @@
 package main
 
 import (
-	"etcdDiscover"
-	"etcdDiscover/demo/intl"
 	"fmt"
+	etcdDiscover "github.com/u2go/etcd-discover"
 	"log"
 )
 
 func main() {
-	discover := etcdDiscover.NewDiscover(intl.Client, intl.ServiceName)
+	discover, err := etcdDiscover.NewDiscover([]string{"127.0.0.1:2379"}, "demo")
+	if err != nil {
+		log.Fatalln(err)
+	}
 	// 所有节点
 	log.Println(discover.GetNodes())
 	// 监听节点变化

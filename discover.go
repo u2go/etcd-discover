@@ -7,6 +7,7 @@ import (
 	"fmt"
 	client "go.etcd.io/etcd/client/v3"
 	"strconv"
+	"time"
 )
 
 var (
@@ -17,12 +18,19 @@ var (
 )
 
 // NewDiscover 创建服务发现实例
-func NewDiscover(client *client.Client, serviceName string) *Discover {
-	return &Discover{
-		client: client,
-
-		serviceName: serviceName,
+func NewDiscover(etcdEndpoints []string, serviceName string) (*Discover, error) {
+	client0, err := client.New(client.Config{
+		Endpoints:   etcdEndpoints,
+		DialTimeout: 5 * time.Second,
+	})
+	if err != nil {
+		return nil, err
 	}
+
+	return &Discover{
+		client:      client0,
+		serviceName: serviceName,
+	}, nil
 }
 
 type Discover struct {
