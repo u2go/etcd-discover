@@ -7,7 +7,6 @@ import (
 	"fmt"
 	client "go.etcd.io/etcd/client/v3"
 	"strconv"
-	"time"
 )
 
 var (
@@ -19,31 +18,30 @@ var (
 
 // NewDiscover 创建服务发现实例
 func NewDiscover(etcdEndpoints []string, serviceName string) (*Discover, error) {
-	client0, err := client.New(client.Config{
-		Endpoints:   etcdEndpoints,
-		DialTimeout: 5 * time.Second,
-	})
+	etcd, err := NewEtcd(etcdEndpoints)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Discover{
-		client:      client0,
-		serviceName: serviceName,
+		Etcd:        etcd,
+		ServiceName: serviceName,
+
+		client: etcd.Client,
 	}, nil
 }
 
 type Discover struct {
-	client *client.Client
+	Etcd        *Etcd
+	ServiceName string
 
-	// 服务名
-	serviceName string
+	client *client.Client
 }
 
 // Register 节点注册
 // 出错返回 error，返回error的时候要重启服务
 func (d *Discover) Register(node *Node) error {
-	var key = fmt.Sprintf("%s%s/%d", etcdKeyPrefix, d.serviceName, node.Id)
+	var key = fmt.Sprintf("%s%s/%d", etcdKeyPrefix, d.ServiceName, node.Id)
 	b, err := json.Marshal(node)
 	if err != nil {
 		return err
@@ -87,7 +85,7 @@ END:
 // WatchNodes 监听节点变化。
 // handle会在收到节点变化时被调用，会调用多次
 func (d *Discover) WatchNodes(handle func(nodes map[int64]*NodeAction)) error {
-	key := fmt.Sprintf("%s%s/", etcdKeyPrefix, d.serviceName)
+	key := fmt.Sprintf("%s%s/", etcdKeyPrefix, d.ServiceName)
 	watcher := client.NewWatcher(d.client)
 	watchChan := watcher.Watch(Ctx(), key, client.WithPrefix())
 	for res := range watchChan {
@@ -119,7 +117,7 @@ func (d *Discover) WatchNodes(handle func(nodes map[int64]*NodeAction)) error {
 
 // GetNodes 获取所有活跃节点
 func (d *Discover) GetNodes() (map[int64]*Node, error) {
-	key := fmt.Sprintf("%s%s/", etcdKeyPrefix, d.serviceName)
+	key := fmt.Sprintf("%s%s/", etcdKeyPrefix, d.ServiceName)
 	kv := client.NewKV(d.client)
 	res, err := kv.Get(Ctx(), key, client.WithPrefix())
 	if err != nil {
